@@ -35,8 +35,13 @@ router.get("/:id", async (req, res, next) => {
 });
 
 router.post("/", async (req, res, next) => {
+  if (!req.user) {
+    return res.send("Please Login to Post")
+  }
+  const userId = req.user.id
+
   try {
-    const { title, content, userId} = req.body
+    const { title, content} = req.body
     const createPost = await prisma.post.create({
       data: {
         title: `${title}`,
@@ -54,8 +59,22 @@ router.post("/", async (req, res, next) => {
 
 router.put("/:id", async (req, res, next) => {
   try {
+    if (!req.user) {
+      return res.send("Please Login to Post")
+    }
     const { id } = req.params
-    const { title, content, userId} = req.body
+    const userId = req.user.id
+    const generatePostbyId = await prisma.post.findUnique({
+      where: {
+        id: parseInt(id),
+      }
+    })
+    const returnedUserId = generatePostbyId.userId
+    const { title, content} = req.body
+
+    if (userId != returnedUserId) {
+      return res.send("Cannot edit another person's post")
+    }
     const updatePost = await prisma.post.update({
       where: {
         id: parseInt(id)
@@ -63,7 +82,7 @@ router.put("/:id", async (req, res, next) => {
       data: {
         title: `${title}`,
         content:  `${content}`,
-        userId: parseInt(userId)
+        userId: returnedUserId
       }
     })
 
@@ -75,12 +94,26 @@ router.put("/:id", async (req, res, next) => {
 
 router.delete("/:id", async (req, res, next) => {
   try {
+    if (!req.user) {
+      return res.send("Please Login to Post")
+    }
     const { id } = req.params
+    const userId = req.user.id
+    const generatePostbyId = await prisma.post.findUnique({
+      where: {
+        id: parseInt(id),
+      }
+    })
+    if ( userId != generatePostbyId.userId) {
+      return res.send("Cannot delete another person's post")
+    }
+    
     const deletePost = await prisma.post.delete({
       where: {
         id: parseInt(id)
       }
     })
+
 
     res.send(deletePost);
   } catch (error) {
